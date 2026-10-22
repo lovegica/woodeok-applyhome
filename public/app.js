@@ -1,26 +1,33 @@
-let data, region = '전체';
-const $ = s => document.querySelector(s);
-function el(tag, text, cls) { const n = document.createElement(tag); if(text !== undefined) n.textContent = text; if(cls) n.className=cls; return n; }
-function render() {
-  const board = $('#board'); board.replaceChildren();
-  const query = $('#search').value.trim().toLowerCase();
-  const items = data.items.filter(x => (region === '전체' || x.region.startsWith(region)) && (x.name+' '+x.address).toLowerCase().includes(query));
-  for (const status of ['접수 중','7일 내 접수','신규 공고']) {
-    const column=el('section',undefined,'column'), entries=items.filter(x=>x.status===status);
-    const heading=el('h2', status); heading.append(el('span',`${entries.length}건`,'count'));column.append(heading);
-    if (!entries.length) column.append(el('p','해당 조건의 공고가 없습니다.','empty'));
-    for(const item of entries) {
-      const card=el('article',undefined,'card');card.append(el('span',item.region+(item.isNew?' · NEW':''),'pill'),el('h3',item.name),el('p',item.address||'주소 미제공','address'));
-      const dates=el('div',undefined,'dates');dates.append(el('div',`접수 ${item.start||'미제공'} ~ ${item.end||'미제공'}`),el('div',`공급 ${item.units ?? '미제공'} 세대`),el('div',`당첨 발표 ${item.winner||'미제공'}`));card.append(dates);
-      const link=el('a','공식 공고 ↗');link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';
-      const image=el('a','카드 이미지 ↓');image.href=`cards/${encodeURIComponent(item.id)}.png`;image.download=`우더기네-${item.id}.png`;card.append(link,image);column.append(card);
-    }board.append(column);
-  }
+let data, region='전체', status='전체', map, overlays=[];
+const $=s=>document.querySelector(s);
+function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
+function days(a,b){return Math.round((Date.parse(b+'T00:00:00+09:00')-Date.parse(a+'T00:00:00+09:00'))/86400000);}
+function localToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function focusCard(item){const card=document.getElementById('card-'+item.id);document.querySelectorAll('.card.selected').forEach(c=>c.classList.remove('selected'));if(card){card.classList.add('selected');card.scrollIntoView({behavior:'smooth',block:'center'});}if(map&&item.location){map.panTo(new kakao.maps.LatLng(item.location.lat,item.location.lng));}}
+function drawMap(items){
+ if(!map)return;overlays.forEach(x=>x.setMap(null));overlays=[];
+ const located=items.filter(x=>x.location),bounds=new kakao.maps.LatLngBounds();
+ for(const item of located){const point=new kakao.maps.LatLng(item.location.lat,item.location.lng);bounds.extend(point);const button=el('button',item.name+' · '+item.status,'map-pin');button.type='button';button.addEventListener('click',()=>focusCard(item));const overlay=new kakao.maps.CustomOverlay({position:point,content:button,yAnchor:1});overlay.setMap(map);overlays.push(overlay);}
+ if(located.length>1)map.setBounds(bounds);else if(located.length){map.setCenter(bounds.getSouthWest());map.setLevel(6);}
+ $('#map-status').textContent=`현재 조건 ${items.length}건 중 위치 확인 ${located.length}건 · 주소 확인 전 단지는 목록에만 표시합니다. 지도는 접수지·견본주택 위치를 뜻하지 않습니다.`;
+ const groups=new Map();located.forEach(x=>{const name=x.location.district||x.region;if(!groups.has(name))groups.set(name,[]);groups.get(name).push(x);});$('#districts').replaceChildren();for(const [name,entries]of groups){const b=el('button',`${name} ${entries.length}건`);b.addEventListener('click',()=>{const box=new kakao.maps.LatLngBounds();entries.forEach(x=>box.extend(new kakao.maps.LatLng(x.location.lat,x.location.lng)));map.setBounds(box);});$('#districts').append(b);}
 }
-async function start(){
- try { const response=await fetch('data.json',{cache:'no-store'});if(!response.ok)throw Error(); data=await response.json();if(!Array.isArray(data.items))throw Error();
- $('#updated').textContent=`마지막 갱신 ${new Date(data.updatedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})} · 한국시간`;
- const age=Date.now()-Date.parse(data.updatedAt);$('#notice').textContent=age>36*3600000?'갱신이 지연되었습니다. 지난 수집 결과입니다. 공식 공고에서 현재 일정을 확인하세요.':`최근 7일 신규 공고와 접수 중·향후 7일 내 접수 공고 ${data.items.length}건 · 단지는 접수 중 → 예정 → 신규 순으로 한 번만 표시합니다.`;
- render(); }catch{ $('#updated').textContent='아직 수집된 데이터가 없습니다.';$('#notice').textContent='실제 데이터 로드에 실패했습니다. GitHub Actions에서 API 비밀값과 최근 배포 결과를 확인하세요.';}
+function render(){
+ const query=$('#search').value.trim().toLowerCase();const regional=data.items.filter(x=>(region==='전체'||x.region.startsWith(region))&&(x.name+' '+x.address).toLowerCase().includes(query));
+ const today=localToday(),day=new Date(today+'T12:00:00+09:00').getUTCDay(),untilSunday=(7-day)%7;
+ $('#active').textContent=regional.filter(x=>x.start&&x.end&&x.start<=today&&today<=x.end).length;
+ $('#closing').textContent=regional.filter(x=>x.end&&days(today,x.end)>=0&&days(today,x.end)<=untilSunday).length;
+ $('#new').textContent=regional.filter(x=>x.isNew).length;
+ const items=regional.filter(x=>status==='전체'||x.status===status).sort((a,b)=>$('#sort').value==='new'?b.announced.localeCompare(a.announced):(a.end||'9999').localeCompare(b.end||'9999'));
+ const board=$('#board');board.replaceChildren();if(!items.length)board.append(el('p','해당 조건의 모집공고가 없습니다.','empty'));
+ for(const item of items){const card=el('article',undefined,'card');card.id='card-'+item.id;const art=el('div',undefined,'art');art.append(el('span',item.status,'badge'));const delta=item.end?days(today,item.end):null;const tag=item.status==='접수 중'&&delta!==null?(delta===0?'오늘 마감':`마감 D-${delta}`):item.isNew?'NEW':'접수 예정';art.append(el('span',tag,'badge dday'));card.append(art);
+ const info=el('div',undefined,'info');info.append(el('div',item.location?.district?`${item.region} · ${item.location.district}`:item.region,'location'),el('h3',item.name));const price=el('div',undefined,'price');price.append(el('small','분양가 · 주택형별 공식 공고 확인'),el('strong','공식 모집공고에서 확인'));info.append(price);
+ const numbers=el('div',undefined,'numbers');for(const [label,value]of [['청약 접수',`${item.start||'미제공'} ~ ${item.end||'미제공'}`],['공급규모',`${item.units??'미제공'} 세대`],['당첨자 발표',item.winner||'미제공'],['공고일',item.announced||'미제공']]){const n=el('div');n.append(el('span',label),el('div',value));numbers.append(n);}info.append(numbers);const actions=el('div',undefined,'actions');const link=el('a','공식 공고 ↗');link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';const image=el('a','공유 카드 ↓');image.href=`cards/${encodeURIComponent(item.id)}.png`;image.download=`우더기네-${item.id}.png`;actions.append(link,image);if(map&&item.location){const b=el('button','지도 보기');b.addEventListener('click',()=>{focusCard(item);$('#map').scrollIntoView({behavior:'smooth',block:'center'});});actions.append(b);}info.append(actions);card.append(info);board.append(card);}
+ drawMap(items);
 }
-document.querySelectorAll('[data-region]').forEach(button=>button.addEventListener('click',()=>{region=button.dataset.region;document.querySelectorAll('[data-region]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));if(data)render();}));$('#search').addEventListener('input',()=>{if(data)render();});start();
+async function setupMap(){
+ try{const response=await fetch('config.json',{cache:'no-store'});if(!response.ok)throw Error();const config=await response.json();if(!config.kakaoJsKey)throw Error();await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey='+encodeURIComponent(config.kakaoJsKey);script.onload=()=>{if(!window.kakao?.maps){reject(Error());return;}kakao.maps.load(resolve);};script.onerror=reject;document.head.append(script);setTimeout(()=>reject(Error()),15000);});$('#map').replaceChildren();map=new kakao.maps.Map($('#map'),{center:new kakao.maps.LatLng(37.45,127.05),level:10});map.addControl(new kakao.maps.ZoomControl(),kakao.maps.ControlPosition.RIGHT);if(data)render();}
+ catch{$('#map').textContent='서울·경기 단지 지도';$('#map-status').textContent='지도를 불러오지 못했습니다. 단지 정보는 아래 목록에서 확인할 수 있습니다.';}
+}
+async function start(){try{const response=await fetch('data.json',{cache:'no-store'});if(!response.ok)throw Error();data=await response.json();if(!Array.isArray(data.items))throw Error();$('#updated').textContent=`갱신 ${new Date(data.updatedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})}`;$('#notice').textContent=Date.now()-Date.parse(data.updatedAt)>36*3600000?'갱신 지연: 지난 수집 결과입니다. 공식 공고에서 현재 일정을 확인하세요.':`서울·경기 APT 일반분양 ${data.items.length}건 · 신규 공고는 접수 중·접수 예정과 중복될 수 있습니다. 지도 위치와 청약 정보는 수집 시점을 기준으로 합니다.`;render();}catch{$('#updated').textContent='데이터 확인 필요';$('#notice').textContent='공고 데이터를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.';}setupMap();}
+for(const [attribute,set]of [['region',v=>region=v],['status',v=>status=v]])document.querySelectorAll(`[data-${attribute}]`).forEach(b=>b.addEventListener('click',()=>{set(b.dataset[attribute]);document.querySelectorAll(`[data-${attribute}]`).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));if(data)render();}));$('#search').addEventListener('input',()=>{if(data)render();});$('#sort').addEventListener('change',()=>{if(data)render();});start();

@@ -76,7 +76,7 @@ def cards(items):
         import textwrap
         lines = textwrap.wrap(item['name'], 19)[:4]
         texts = ''.join(f'<text x="76" y="{290+i*78}" font-size="58" font-weight="700">{html.escape(line)}</text>' for i, line in enumerate(lines))
-        svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350"><rect width="1080" height="1350" fill="#f4f3ed"/><g font-family="Noto Sans CJK KR" fill="#193c35"><text x="76" y="115" font-size="32">우더기네 · 서울/경기 청약보드</text><rect x="76" y="160" width="350" height="62" rx="31" fill="#d8e9df"/><text x="100" y="202" font-size="30">{html.escape(item['status'])}</text>{texts}<text x="76" y="720" font-size="30">청약 접수</text><text x="76" y="780" font-size="40">{item['start'] or '미제공'} ~ {item['end'] or '미제공'}</text><text x="76" y="900" font-size="30">공급규모 {html.escape(str(item['units'] if item['units'] is not None else '미제공'))} 세대</text><text x="76" y="1010" font-size="30">당첨자 발표 {html.escape(item['winner'] or '미제공')}</text><text x="76" y="1190" font-size="24">출처: 한국부동산원 청약홈 · 신청 전 모집공고 확인</text><text x="76" y="1240" font-size="24">분양가·자격·일정은 공식 모집공고를 확인하세요.</text></g></svg>'''
+        svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350"><rect width="1080" height="1350" fill="#f8f7f2"/><g font-family="Noto Sans CJK KR" fill="#25251f"><text x="76" y="115" font-size="32">우더기네 · 서울/경기 청약보드</text><rect x="76" y="160" width="350" height="62" rx="31" fill="#ffda35"/><text x="100" y="202" font-size="30">{html.escape(item['status'])}</text>{texts}<text x="76" y="720" font-size="30">청약 접수</text><text x="76" y="780" font-size="40">{item['start'] or '미제공'} ~ {item['end'] or '미제공'}</text><text x="76" y="900" font-size="30">공급규모 {html.escape(str(item['units'] if item['units'] is not None else '미제공'))} 세대</text><text x="76" y="1010" font-size="30">당첨자 발표 {html.escape(item['winner'] or '미제공')}</text><text x="76" y="1190" font-size="24">출처: 한국부동산원 청약홈 · 신청 전 모집공고 확인</text><text x="76" y="1240" font-size="24">분양가·자격·일정은 공식 모집공고를 확인하세요.</text></g></svg>'''
         (folder / (item['id'] + '.svg')).write_text(svg, encoding='utf-8')
         import cairosvg
         cairosvg.svg2png(bytestring=svg.encode('utf-8'), write_to=str(folder / (item['id'] + '.png')))
@@ -87,7 +87,10 @@ def main():
         raise RuntimeError('APPLYHOME_SERVICE_KEY 비밀값이 필요합니다.')
     now = dt.datetime.now(KST)
     items = select(fetch(key), now.date())
+    from enrich import enrich
+    enrich(items)
     cards(items)
+    (ROOT / "public/config.json").write_text(json.dumps({"kakaoJsKey": os.environ.get("KAKAO_JAVASCRIPT_KEY", "").strip()}), encoding="utf-8")
     data = dict(updatedAt=now.isoformat(), date=now.date().isoformat(), items=items, scope='APT 일반분양 · 서울/경기')
     (ROOT / 'public/data.json').write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
     print(f'공고 {len(items)}건 생성 완료')
