@@ -1,36 +1,76 @@
-"""Kakao address geocoding in CI; only coordinates leave the server."""
+"""Geocode parcel addresses in CI, retaining lookup diagnostics without secrets."""
 import json
 import os
+import re
+import urllib.error
 import urllib.parse
 import urllib.request
 
 
+def candidates(value):
+    clean = re.split(r'[\[(]', value)[0]
+    clean = re.sub(r'\s*일원.*$', '', clean).strip()
+    clean = re.sub(r'(\d)번지', r'\1', clean)
+    values = [value, clean]
+    if '화성' in clean:
+        legacy = clean.replace('화성특례시', '화성시')
+        legacy = re.sub(r'화성시\s+(동탄구|만세구|효행구|병점구)\s+', '화성시 ', legacy)
+        values.append(legacy)
+    return list(dict.fromkeys(v for v in values if v))
+
+
+def match_document(docs, item, query):
+    # Require a full parcel/road address, a unique result and matching province.
+    exact = [d for d in docs if d.get('address_type') in ('ROAD_ADDR', 'REGION_ADDR')]
+    if len(exact) != 1:
+        return None
+    doc = exact[0]
+    address = doc.get('address') or doc.get('road_address') or {}
+    province = address.get('region_1depth_name', '')
+    if province not in ('서울', '경기', '서울특별시', '경기도'):
+        return None
+    if item['region'].startswith('서울') != province.startswith('서울'):
+        return None
+    # For parcel queries, validate neighborhood and lot number in the result.
+    parcel = re.search(r'(\S+(?:동|리))\s+(산\s*)?(\d+)(?:-(\d+))?', query)
+    if parcel:
+        neighborhood, mountain, main, sub = parcel.groups()
+        if address.get('region_3depth_name') != neighborhood:
+            return None
+        if str(address.get('main_address_no', '')).lstrip('0') != main.lstrip('0'):
+            return None
+        if str(address.get('sub_address_no') or '0').lstrip('0') != str(sub or '0').lstrip('0'):
+            return None
+        if (address.get('mountain_yn') == 'Y') != bool(mountain):
+            return None
+    lat, lng = float(doc['y']), float(doc['x'])
+    if not (33 <= lat <= 39 and 124 <= lng <= 132):
+        return None
+    return {'lat': lat, 'lng': lng, 'district': address.get('region_2depth_name', ''), 'accuracy': 'parcel' if parcel else 'address'}
+
+
 def enrich(items):
     key = os.environ.get('KAKAO_REST_API_KEY', '').strip()
-    failures = 0
     for item in items:
         item['location'] = None
+        item['locationStatus'] = 'key_missing' if not key else 'not_found'
         if not key or not item['address']:
             continue
-        query = urllib.parse.urlencode({'query': item['address'], 'analyze_type': 'exact'})
-        request = urllib.request.Request('https://dapi.kakao.com/v2/local/search/address.json?' + query, headers={'Authorization': 'KakaoAK ' + key})
-        try:
-            with urllib.request.urlopen(request, timeout=20) as response:
-                docs = json.load(response).get('documents', [])
-            if not docs:
-                continue
-            # Do not place an ambiguous result or a neighborhood centroid as a complex.
-            exact = [d for d in docs if d.get('address_type') in ('ROAD_ADDR', 'REGION_ADDR')]
-            if len(exact) != 1:
-                continue
-            doc = exact[0]
-            address = doc.get('road_address') or doc.get('address') or {}
-            province = address.get('region_1depth_name', '')
-            if province not in ('서울', '경기', '서울특별시', '경기도'):
-                continue
-            if item['region'].startswith('서울') != province.startswith('서울'):
-                continue
-            item['location'] = {'lat': float(doc['y']), 'lng': float(doc['x']), 'district': address.get('region_2depth_name', '')}
-        except Exception:
-            failures += 1
-    print(f'지도 좌표 {sum(bool(i["location"]) for i in items)}건 / 주소 조회 실패 {failures}건')
+        for query in candidates(item['address']):
+            encoded = urllib.parse.urlencode({'query': query, 'analyze_type': 'exact'})
+            request = urllib.request.Request('https://dapi.kakao.com/v2/local/search/address.json?' + encoded, headers={'Authorization': 'KakaoAK ' + key})
+            try:
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    docs = json.load(response).get('documents', [])
+                item['location'] = match_document(docs, item, query)
+                if item['location']:
+                    item['locationStatus'] = 'matched'
+                    break
+            except urllib.error.HTTPError as error:
+                item['locationStatus'] = 'http_' + str(error.code)
+                break
+            except Exception:
+                item['locationStatus'] = 'lookup_error'
+                break
+        print('지도 주소 확인:', item['id'], item['locationStatus'])
+    print(f'지도 좌표 {sum(bool(i["location"]) for i in items)}건 / 총 {len(items)}건')
