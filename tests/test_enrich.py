@@ -47,3 +47,13 @@ class AddressTests(unittest.TestCase):
     def test_wrong_city_rejected(self):
         doc = {'address_type':'REGION_ADDR', 'x':'127', 'y':'37', 'address':{'region_1depth_name':'경기','region_2depth_name':'다른시','region_3depth_name':'동패동','main_address_no':'1673','sub_address_no':'','mountain_yn':'N'}}
         self.assertIsNone(match_document([doc], {'region':'경기'}, '경기도 파주시 동패동 1673'))
+
+class OfficialLocationTests(unittest.TestCase):
+    def test_lh_site_location_available_without_key(self):
+        from scripts.enrich import verified_location
+        item = {'id':'2026000531-2026000531', 'name':'시흥거모지구 S-1블록 공공분양(본청약)'}
+        location = verified_location(item)
+        self.assertEqual(location['accuracy'], 'official_site')
+        self.assertIn('apply.lh.or.kr', location['sourceUrl'])
+        item['name'] = '다른 단지'
+        self.assertIsNone(verified_location(item))

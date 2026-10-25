@@ -3,6 +3,7 @@ import datetime as dt
 import json
 import os
 import re
+from pathlib import Path
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -69,10 +70,23 @@ def match_document(docs, item, query):
     return {'lat': lat, 'lng': lng, 'district': address.get('region_2depth_name', ''), 'accuracy': 'parcel' if parcel else 'road', 'provider': 'Kakao Local address', 'query': query, 'matchedAddress': doc.get('address_name', ''), 'verifiedAt': dt.datetime.now(dt.timezone.utc).isoformat()}
 
 
+def verified_location(item):
+    records = json.loads(Path(__file__).with_name('verified_locations.json').read_text())
+    record = records.get(item['id'])
+    # Bind evidence to both the specific notice and its name, never a fuzzy name match.
+    if record and record['name'] == item.get('name'):
+        return {k: v for k, v in record.items() if k != 'name'}
+    return None
+
+
 def enrich(items):
     key = os.environ.get('KAKAO_REST_API_KEY', '').strip()
     for item in items:
-        item['location'] = None
+        item['location'] = verified_location(item)
+        if item['location']:
+            item['locationStatus'] = 'verified_source'
+            print('지도 공식 위치 확인:', item['id'])
+            continue
         item['locationStatus'] = 'key_missing' if not key else 'not_found'
         if not key or not item['address']:
             continue

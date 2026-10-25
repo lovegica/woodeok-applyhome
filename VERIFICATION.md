@@ -30,3 +30,12 @@ GitHub 쓰기 인증이 없어 push dry-run이 `could not read Username`으로 �
 - https://www.data.go.kr/data/15098547/openapi.do
 - https://infuser.odcloud.kr/api/stages/37000/api-docs?1643022751478
 - https://developers.kakao.com/docs/ko/local/dev-guide
+
+
+## 추가 보완: 나머지 단지 지도 표시
+- 시흥거모 S-1: LH 공식 공고 0000061186의 사업지 지도 좌표 37.3506485, 126.7827797 확인.
+- 시흥하중 A1: LH 공식 공고 0000061078의 사업지 지도 좌표 37.3944873, 126.8028769 확인. 이전 모집공고이나 동일 A1 사업지임을 주소와 블록으로 대조. 현재 접수 일정이나 세대수에는 해당 이전 공고를 사용하지 않음.
+- 공고 ID와 이름을 함께 묶은 공식 좌표 보완 파일 추가. Kakao REST 키가 없어도 이 두 곳은 위치 확인 가능. 카드에 원문 근거 링크 표시.
+- 운정 3/4단지와 향남은 주소 정규화 개선 적용 상태이며 실제 API 재조회 전 좌표 확보 여부는 미확정.
+- Python 14건, 프런트엔드 assertion 4건, JavaScript 문법 검사 통과.
+- GitHub 인증/브라우저 오류 재확인. 실제 사이트 배포는 여전히 미완료.
