@@ -19,20 +19,50 @@ def date(value):
     except (ValueError, TypeError):
         return None
 
+SOURCES = {
+    'getAPTLttotPblancDetail': 'APT 일반분양',
+    'getRemndrLttotPblancDetail': '무순위·잔여세대·재공급',
+    'getOPTLttotPblancDetail': '임의공급',
+}
+
+def schedules(row):
+    periods = []
+    pairs = [('SPSPLY_RCEPT_BGNDE', 'SPSPLY_RCEPT_ENDDE', '특별공급'),
+             ('GNRL_RCEPT_BGNDE', 'GNRL_RCEPT_ENDDE', '일반공급')]
+    for rank in (1, 2):
+        for area in ('CRSPAREA', 'ETC_GG', 'ETC_AREA'):
+            pairs.append((f'GNRL_RNK{rank}_{area}_RCPTDE', f'GNRL_RNK{rank}_{area}_ENDDE', f'{rank}순위'))
+    for start, end, label in pairs:
+        begin, finish = date(row.get(start)), date(row.get(end))
+        if begin and finish and begin <= finish:
+            entry = dict(type=label, start=str(begin), end=str(finish))
+            if entry not in periods:
+                periods.append(entry)
+    if not periods:
+        for prefix in ('SUBSCRPT_RCEPT', 'RCEPT'):
+            begin, finish = date(row.get(prefix+'_BGNDE')), date(row.get(prefix+'_ENDDE'))
+            if begin and finish and begin <= finish:
+                periods.append(dict(type=row.get('_sourceType', '청약 접수'), start=str(begin), end=str(finish)))
+                break
+    return periods
+
 def select(rows, today):
-    end = today + dt.timedelta(days=7)
     result = {}
     for row in rows:
         region = str(row.get('SUBSCRPT_AREA_CODE_NM') or '')
-        address = str(row.get('HSSPLY_ADRES') or '')
-        if not (region in ('서울', '서울특별시', '경기', '경기도') or address.startswith(('서울', '경기'))):
+        address = str(row.get('HSSPLY_ADRES') or '').strip()
+        if address.startswith(('서울', '경기')):
+            region = '서울' if address.startswith('서울') else '경기'
+        elif region not in ('서울', '서울특별시', '경기', '경기도'):
             continue
-        begin, finish, announced = (date(row.get(k)) for k in ('RCEPT_BGNDE', 'RCEPT_ENDDE', 'RCRIT_PBLANC_DE'))
-        active = bool(begin and finish and begin <= today <= finish)
-        upcoming = bool(begin and today < begin <= end)
+        periods = schedules(row)
+        relevant = [p for p in periods if p['end'] >= str(today)]
+        if not relevant:
+            continue
+        active = any(p['start'] <= str(today) <= p['end'] for p in periods)
+        begin, finish = min(p['start'] for p in periods), max(p['end'] for p in periods)
+        announced = date(row.get('RCRIT_PBLANC_DE'))
         new = bool(announced and today - dt.timedelta(days=6) <= announced <= today)
-        if not (active or upcoming or new):
-            continue
         identity = str(row.get('HOUSE_MANAGE_NO') or '') + '-' + str(row.get('PBLANC_NO') or '')
         if identity == '-':
             raise ValueError('공고 식별번호 누락')
@@ -40,17 +70,17 @@ def select(rows, today):
         parsed = urllib.parse.urlsplit(link)
         if parsed.scheme != 'https' or not (parsed.hostname == 'applyhome.co.kr' or (parsed.hostname or '').endswith('.applyhome.co.kr')):
             link = 'https://www.applyhome.co.kr/'
-        result[identity] = dict(id=identity, name=str(row.get('HOUSE_NM') or '단지명 미제공'), region=region or address.split()[0], address=address, start=str(begin or ''), end=str(finish or ''), announced=str(announced or ''), units=row.get('TOT_SUPLY_HSHLDCO'), winner=str(row.get('PRZWNER_PRESNATN_DE') or ''), status='접수 중' if active else '7일 내 접수' if upcoming else '신규 공고', isNew=new, url=link)
+        result[identity] = dict(id=identity, name=str(row.get('HOUSE_NM') or '단지명 미제공'), region=region, address=address, start=begin, end=finish, schedules=periods, applicationType=row.get('HOUSE_SECD_NM') or row.get('_sourceType', 'APT 일반분양'), announced=str(announced or ''), units=row.get('TOT_SUPLY_HSHLDCO'), winner=str(row.get('PRZWNER_PRESNATN_DE') or ''), status='접수 중' if active else '접수 예정', isNew=new, url=link)
     return sorted(result.values(), key=lambda x: (x['start'], x['name']))
 
-def fetch(key):
+def fetch_source(key, endpoint):
     rows = []
     for page in range(1, 1001):
         query = urllib.parse.urlencode({'page': page, 'perPage': 1000, 'serviceKey': key})
         payload = None
         for attempt in range(3):
             try:
-                with urllib.request.urlopen(BASE + 'getAPTLttotPblancDetail?' + query, timeout=60) as response:
+                with urllib.request.urlopen(BASE + endpoint + '?' + query, timeout=60) as response:
                     payload = json.load(response)
                 break
             except Exception:
@@ -67,6 +97,17 @@ def fetch(key):
         if len(batch) < 1000:
             return rows
     raise RuntimeError('페이지 제한 초과: 불완전한 데이터 배포 중단')
+
+def fetch(key):
+    rows = []
+    for endpoint, label in SOURCES.items():
+        batch = fetch_source(key, endpoint)
+        for row in batch:
+            row['_sourceType'] = label
+        rows.extend(batch)
+        print(label, len(batch), '건 수집')
+    return rows
+
 
 def cards(items):
     folder = ROOT / 'public/cards'
@@ -91,7 +132,7 @@ def main():
     enrich(items)
     cards(items)
     (ROOT / "public/config.json").write_text(json.dumps({"kakaoJsKey": os.environ.get("KAKAO_JAVASCRIPT_KEY", "").strip()}), encoding="utf-8")
-    data = dict(updatedAt=now.isoformat(), date=now.date().isoformat(), items=items, scope='APT 일반분양 · 서울/경기')
+    data = dict(updatedAt=now.isoformat(), date=now.date().isoformat(), items=items, scope='서울/경기 APT 일반·특별·1/2순위·무순위·재공급·임의공급')
     (ROOT / 'public/data.json').write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
     print(f'공고 {len(items)}건 생성 완료')
 

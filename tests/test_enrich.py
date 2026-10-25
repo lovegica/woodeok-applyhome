@@ -17,7 +17,7 @@ class GeocodeTests(unittest.TestCase):
     @patch.dict(os.environ, {'KAKAO_REST_API_KEY': 'test-only'})
     @patch('scripts.enrich.urllib.request.urlopen')
     def test_exact_coordinate_only(self, urlopen):
-        doc={'address_type':'ROAD_ADDR','x':'127.1','y':'37.5','road_address':{'region_1depth_name':'서울','region_2depth_name':'강동구'}}
+        doc={'address_type':'ROAD_ADDR','x':'127.1','y':'37.5','road_address':{'region_1depth_name':'서울','region_2depth_name':'강동구','road_name':'예시로','main_building_no':'1','sub_building_no':''}}
         with patch('scripts.enrich.json.load',return_value={'documents':[doc]}):
             items=[{'address':'서울특별시 예시로 1','region':'서울','id':'test'}]
             enrich(items)
@@ -36,3 +36,14 @@ class AddressTests(unittest.TestCase):
     def test_wrong_parcel_is_rejected(self):
         doc = {'address_type':'REGION_ADDR','x':'127.1','y':'37.2','address':{'region_1depth_name':'경기','region_3depth_name':'반송동','main_address_no':'99','sub_address_no':'','mountain_yn':'N'}}
         self.assertIsNone(match_document([doc], {'region':'경기'}, '경기도 화성시 반송동 95'))
+
+    def test_embedded_parcel_preserved(self):
+        self.assertIn('경기도 파주시 동패동 1673번지', candidates('경기도 파주시 파주운정3지구 3블록(경기도 파주시 동패동 1673번지 일원)'))
+
+    def test_block_or_district_centroid_is_rejected(self):
+        doc = {'address_type':'REGION_ADDR', 'x':'127', 'y':'37', 'address':{'region_1depth_name':'경기'}}
+        self.assertIsNone(match_document([doc], {'region':'경기'}, '경기도 시흥시 거모동 일원 S-1블록'))
+
+    def test_wrong_city_rejected(self):
+        doc = {'address_type':'REGION_ADDR', 'x':'127', 'y':'37', 'address':{'region_1depth_name':'경기','region_2depth_name':'다른시','region_3depth_name':'동패동','main_address_no':'1673','sub_address_no':'','mountain_yn':'N'}}
+        self.assertIsNone(match_document([doc], {'region':'경기'}, '경기도 파주시 동패동 1673'))

@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync('public/app.js', 'utf8');
+vm.runInThisContext(source.slice(source.indexOf('function isActive('), source.indexOf('function drawMap(')));
+const item={id:'x', schedules:[{start:'2026-10-23',end:'2026-10-23'},{start:'2026-10-26',end:'2026-10-26'}]};
+assert.equal(isActive(item,'2026-10-25'),false);
+assert.equal(isActive(item,'2026-10-26'),true);
+assert.equal(isActive(item,'2026-10-27'),false);
+let scrolled=false,selected=false; const card={classList:{add(){selected=true}},scrollIntoView(){scrolled=true}};
+global.document={getElementById:id=>{assert.equal(id,'card-x');return card},querySelectorAll:()=>[]};global.map=null;
+focusCard(item);assert.ok(scrolled&&selected);console.log('4 frontend assertions passed');

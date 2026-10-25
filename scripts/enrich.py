@@ -1,4 +1,5 @@
 """Geocode parcel addresses in CI, retaining lookup diagnostics without secrets."""
+import datetime as dt
 import json
 import os
 import re
@@ -12,6 +13,11 @@ def candidates(value):
     clean = re.sub(r'\s*일원.*$', '', clean).strip()
     clean = re.sub(r'(\d)번지', r'\1', clean)
     values = [value, clean]
+    # Preserve full parcel addresses embedded in parentheses (development blocks).
+    for embedded in re.findall(r'[\[(]([^\[\]()]+)[\])]', value):
+        if embedded.strip().startswith(('서울', '경기')):
+            values.extend(candidates(embedded))
+    values = [re.sub(r'\s*일원.*$', '', v).strip() for v in values]
     if '화성' in clean:
         legacy = clean.replace('화성특례시', '화성시')
         legacy = re.sub(r'화성시\s+(동탄구|만세구|효행구|병점구)\s+', '화성시 ', legacy)
@@ -25,7 +31,21 @@ def match_document(docs, item, query):
     if len(exact) != 1:
         return None
     doc = exact[0]
-    address = doc.get('address') or doc.get('road_address') or {}
+    parcel = re.search(r'(\S+(?:동|리))\s+(산\s*)?(\d+)(?:-(\d+))?', query)
+    road = re.search(r'(\S+(?:대로|로|길))\s+(\d+)(?:-(\d+))?', query)
+    if not parcel and not road:
+        return None
+    address = (doc.get('address') if parcel else doc.get('road_address')) or {}
+    # A matching province alone is insufficient: require city/district as well.
+    for district in re.findall(r'(\S+(?:시|군|구))(?=\s)', query):
+        if district in ('서울특별시', '경기도', '화성특례시'):
+            continue
+        if district not in (address.get('region_2depth_name', '') + ' ' + address.get('region_3depth_name', '')):
+            return None
+    if road:
+        name, main, sub = road.groups()
+        if address.get('road_name') != name or str(address.get('main_building_no')) != main or str(address.get('sub_building_no') or '0') != str(sub or '0'):
+            return None
     province = address.get('region_1depth_name', '')
     if province not in ('서울', '경기', '서울특별시', '경기도'):
         return None
@@ -46,7 +66,7 @@ def match_document(docs, item, query):
     lat, lng = float(doc['y']), float(doc['x'])
     if not (33 <= lat <= 39 and 124 <= lng <= 132):
         return None
-    return {'lat': lat, 'lng': lng, 'district': address.get('region_2depth_name', ''), 'accuracy': 'parcel' if parcel else 'address'}
+    return {'lat': lat, 'lng': lng, 'district': address.get('region_2depth_name', ''), 'accuracy': 'parcel' if parcel else 'road', 'provider': 'Kakao Local address', 'query': query, 'matchedAddress': doc.get('address_name', ''), 'verifiedAt': dt.datetime.now(dt.timezone.utc).isoformat()}
 
 
 def enrich(items):
