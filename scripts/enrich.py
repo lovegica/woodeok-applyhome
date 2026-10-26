@@ -23,6 +23,7 @@ def candidates(value):
         legacy = clean.replace('화성특례시', '화성시')
         legacy = re.sub(r'화성시\s+(동탄구|만세구|효행구|병점구)\s+', '화성시 ', legacy)
         values.append(legacy)
+    values += [re.sub(r'산\s+(?=\d)', '산', v) for v in values]
     return list(dict.fromkeys(v for v in values if v))
 
 
@@ -97,6 +98,8 @@ def enrich(items):
                 with urllib.request.urlopen(request, timeout=15) as response:
                     docs = json.load(response).get('documents', [])
                 item['location'] = match_document(docs, item, query)
+                if not item['location'] and docs:
+                    print('주소 대조 불일치:', item['id'], query, json.dumps([{k: d.get(k) for k in ('address_type', 'address_name', 'address', 'road_address')} for d in docs], ensure_ascii=False))
                 if item['location']:
                     item['locationStatus'] = 'matched'
                     break
