@@ -57,7 +57,12 @@ def match_document(docs, item, query):
     parcel = re.search(r'(\S+(?:동|리))\s+(산\s*)?(\d+)(?:-(\d+))?', query)
     if parcel:
         neighborhood, mountain, main, sub = parcel.groups()
-        if address.get('region_3depth_name') != neighborhood:
+        result_neighborhood = address.get('region_3depth_name', '')
+        # Kakao returns rural names as '읍/면 리', urban names as '동'.
+        if not result_neighborhood or result_neighborhood.split()[-1] != neighborhood:
+            return None
+        township = re.search(r'(\S+(?:읍|면))(?=\s)', query)
+        if township and township.group(1) not in result_neighborhood.split():
             return None
         if str(address.get('main_address_no', '')).lstrip('0') != main.lstrip('0'):
             return None
@@ -91,7 +96,12 @@ def enrich(items):
         item['locationStatus'] = 'key_missing' if not key else 'not_found'
         if not key or not item['address']:
             continue
-        for query in candidates(item['address']):
+        aliases = json.loads(Path(__file__).with_name('verified_address_aliases.json').read_text())
+        alias = aliases.get(item['id'])
+        if alias and (alias['name'] != item.get('name') or alias['originalAddress'] != item['address']):
+            alias = None
+        queries = candidates(item['address']) + ([alias['query']] if alias else [])
+        for query in queries:
             encoded = urllib.parse.urlencode({'query': query, 'analyze_type': 'exact'})
             request = urllib.request.Request('https://dapi.kakao.com/v2/local/search/address.json?' + encoded, headers={'Authorization': 'KakaoAK ' + key})
             try:
@@ -101,6 +111,8 @@ def enrich(items):
                 if not item['location'] and docs:
                     print('주소 대조 불일치:', item['id'], query, json.dumps([{k: d.get(k) for k in ('address_type', 'address_name', 'address', 'road_address')} for d in docs], ensure_ascii=False))
                 if item['location']:
+                    if alias and query == alias['query']:
+                        item['location'].update(sourceUrl=alias['sourceUrl'], addressEvidence=alias['evidence'])
                     item['locationStatus'] = 'matched'
                     break
             except urllib.error.HTTPError as error:

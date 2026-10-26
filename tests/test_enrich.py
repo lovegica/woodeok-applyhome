@@ -57,3 +57,11 @@ class OfficialLocationTests(unittest.TestCase):
         self.assertIn('apply.lh.or.kr', location['sourceUrl'])
         item['name'] = '다른 단지'
         self.assertIsNone(verified_location(item))
+
+class RuralParcelTests(unittest.TestCase):
+    def test_township_and_mountain_parcel(self):
+        doc = {'address_type':'REGION_ADDR', 'x':'126.907430596094', 'y':'37.0970897922044', 'address':{'region_1depth_name':'경기','region_2depth_name':'화성시 만세구','region_3depth_name':'향남읍 상신리','main_address_no':'13','sub_address_no':'13','mountain_yn':'Y'}}
+        query = '경기도 화성시 만세구 향남읍 상신리 산 13-13'
+        self.assertIsNotNone(match_document([doc], {'region':'경기'}, query))
+        self.assertIsNone(match_document([doc], {'region':'경기'}, query.replace('향남읍', '다른읍')))
+        self.assertIsNone(match_document([doc], {'region':'경기'}, query.replace('산 13', '13')))
