@@ -104,9 +104,9 @@ def render(item, review, today, folder):
     text(52,1244,review['caution'],24,muted)
     box(0,1290,1080,150,navy)
     handle = '@woodeok.apt'
-    handle_font = ImageFont.truetype(fontfile, 46)
+    handle_font = ImageFont.truetype(fontfile, 26)
     handle_x = (W - d.textlength(handle, font=handle_font)) / 2
-    text(handle_x,1343,handle,46,'white',1000)
+    text(handle_x,1353,handle,26,'#D9E3E5',1000)
     filename = item['id'] + '-news.png'
     canvas.save(folder/filename, optimize=True)
     return 'cards/'+filename
