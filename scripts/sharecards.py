@@ -103,17 +103,10 @@ def render(item, review, today, folder):
     text(466,1175,review['resultLabel'],31,'white',540)
     text(52,1244,review['caution'],24,muted)
     box(0,1290,1080,150,navy)
-    box(45,1314,7,99,yellow)
-    text(72,1314,'더 많은 청약 소식은 인스타에서',27,'#D9E3E5',720)
-    text(69,1359,'@woodeok.apt',46,'white',720)
-    import qrcode
-    qr = qrcode.QRCode(box_size=6, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
-    qr.add_data('https://www.instagram.com/woodeok.apt/')
-    qr.make(fit=True)
-    qr_image = qr.make_image(fill_color=navy, back_color='white').convert('RGB')
-    qr_image = qr_image.resize((124,124), Image.Resampling.NEAREST)
-    canvas.paste(qr_image,(908,1303))
-    text(717,1372,'인스타 →',27,'#FFDC45',170)
+    handle = '@woodeok.apt'
+    handle_font = ImageFont.truetype(fontfile, 46)
+    handle_x = (W - d.textlength(handle, font=handle_font)) / 2
+    text(handle_x,1343,handle,46,'white',1000)
     filename = item['id'] + '-news.png'
     canvas.save(folder/filename, optimize=True)
     return 'cards/'+filename
