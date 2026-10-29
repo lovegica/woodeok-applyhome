@@ -1,0 +1,6 @@
+public/data.json
+public/config.json
+public/cards/
+public/sharecards.json
+__pycache__/
+*.pyc

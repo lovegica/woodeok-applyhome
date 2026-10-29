@@ -70,13 +70,13 @@ def select(rows, today):
         parsed = urllib.parse.urlsplit(link)
         if parsed.scheme != 'https' or not (parsed.hostname == 'applyhome.co.kr' or (parsed.hostname or '').endswith('.applyhome.co.kr')):
             link = 'https://www.applyhome.co.kr/'
-        result[identity] = dict(id=identity, name=str(row.get('HOUSE_NM') or '단지명 미제공'), region=region, address=address, start=begin, end=finish, schedules=periods, applicationType=row.get('HOUSE_SECD_NM') or row.get('_sourceType', 'APT 일반분양'), announced=str(announced or ''), units=row.get('TOT_SUPLY_HSHLDCO'), winner=str(row.get('PRZWNER_PRESNATN_DE') or ''), status='접수 중' if active else '접수 예정', isNew=new, url=link)
+        result[identity] = dict(id=identity, name=str(row.get('HOUSE_NM') or '단지명 미제공'), region=region, address=address, start=begin, end=finish, schedules=periods, applicationType=row.get('HOUSE_SECD_NM') or row.get('_sourceType', 'APT 일반분양'), announced=str(announced or ''), units=row.get('TOT_SUPLY_HSHLDCO'), sourceEndpoint=row.get('_endpoint', 'getAPTLttotPblancDetail'), winner=str(row.get('PRZWNER_PRESNATN_DE') or ''), status='접수 중' if active else '접수 예정', isNew=new, url=link)
     return sorted(result.values(), key=lambda x: (x['start'], x['name']))
 
-def fetch_source(key, endpoint):
+def fetch_source(key, endpoint, filters=None):
     rows = []
     for page in range(1, 1001):
-        query = urllib.parse.urlencode({'page': page, 'perPage': 1000, 'serviceKey': key})
+        query = urllib.parse.urlencode({'page': page, 'perPage': 1000, 'serviceKey': key, **(filters or {})})
         payload = None
         for attempt in range(3):
             try:
@@ -104,6 +104,7 @@ def fetch(key):
         batch = fetch_source(key, endpoint)
         for row in batch:
             row['_sourceType'] = label
+            row['_endpoint'] = endpoint
         rows.extend(batch)
         print(label, len(batch), '건 수집')
     return rows
@@ -131,6 +132,17 @@ def main():
     from enrich import enrich
     enrich(items)
     cards(items)
+    from sharecards import price84, build_sharecards
+    for item in items:
+        manage, notice = item['id'].split('-')
+        try:
+            models = fetch_source(key, item['sourceEndpoint'].replace('Detail', 'Mdl'),
+                                  {'cond[HOUSE_MANAGE_NO::EQ]': manage, 'cond[PBLANC_NO::EQ]': notice})
+            item['price84'] = price84(models)
+        except RuntimeError:
+            item['price84'] = None
+            print('주택형 가격 수집 실패:', item['id'])
+    build_sharecards(items, now.date())
     (ROOT / "public/config.json").write_text(json.dumps({"kakaoJsKey": os.environ.get("KAKAO_JAVASCRIPT_KEY", "").strip()}), encoding="utf-8")
     data = dict(updatedAt=now.isoformat(), date=now.date().isoformat(), items=items, scope='서울/경기 APT 일반·특별·1/2순위·무순위·재공급·임의공급')
     (ROOT / 'public/data.json').write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')

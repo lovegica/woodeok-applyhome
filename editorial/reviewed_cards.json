@@ -1,0 +1,35 @@
+{
+  "2026910275-2026910275": {
+    "name": "더샵 분당하이스트",
+    "complexUnits": 1149,
+    "noticeUnits": 58,
+    "start": "2026-11-02",
+    "end": "2026-11-02",
+    "noticeDate": "2026.10.27",
+    "reviewedAt": "2026-10-29",
+    "price84MinManwon": 266000,
+    "price84MaxManwon": 298100,
+    "priceNote": "이번 공급 동·호수 기준 · 옵션 별도",
+    "eyebrow": "경기 성남시 분당구 정자동  ·  무순위(사후)",
+    "headline": [
+      "분당 1,149세대 대단지",
+      "더샵 분당하이스트"
+    ],
+    "hero": "assets/bundang-highest-official.jpg",
+    "imageCaption": "공식 홈페이지 CG · 실제 모습과 차이가 있을 수 있습니다",
+    "moveIn": "2027.12",
+    "locationLine": "정자역 생활권 · 신분당선 / 수인분당선",
+    "conditions": [
+      "수도권 거주 무주택세대구성원",
+      "청약통장 불필요 · 제한 대상은 공고문 확인"
+    ],
+    "receiptLabel": "11.02(월)",
+    "resultLabel": "11.05 발표 · 11.07 계약",
+    "caution": "리모델링 단지 · 재당첨 제한 10년 · 거주의무 없음",
+    "sourceLabel": "사업주체 모집공고 p.1~5",
+    "sourceUrl": "https://xn--ok1btgm3zxqdwrcgyl3jvsze.kr/data/gongo_mu.pdf",
+    "complexSourceUrl": "https://xn--ok1btgm3zxqdwrcgyl3jvsze.kr/",
+    "heroSourceUrl": "https://xn--ok1btgm3zxqdwrcgyl3jvsze.kr/sub/planning01.jpg",
+    "sourceSha256": "9bfe7fb76741361a0f2b2dcaad079f8f3f19a372436265f750e642b93bc9eab9"
+  }
+}

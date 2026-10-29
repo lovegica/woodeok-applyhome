@@ -33,6 +33,7 @@ jobs:
         run: |
          mkdir -p ~/.local/share/fonts
          curl -fL --connect-timeout 15 --max-time 90 --retry 1 -o ~/.local/share/fonts/NotoSansCJKkr-Regular.otf https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf
+         curl -fL --connect-timeout 15 --max-time 90 --retry 1 -o ~/.local/share/fonts/NotoSansCJKkr-Bold.otf https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/Korean/NotoSansCJKkr-Bold.otf
          fc-cache -f
          fc-match 'Noto Sans CJK KR'
       - run: python scripts/build.py

@@ -2,3 +2,5 @@
 
 .map-pin.today{background:var(--yellow);font-weight:700}
 .info p{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+
+.news-section{padding:26px;margin:0 0 28px;border:1px solid #dddccf;border-radius:20px;background:#eeede5}.news-section h2{font-size:26px}.news-section .eyebrow{margin:0 0 9px}.news-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,340px));gap:24px}.news-card{background:white;border-radius:14px;overflow:hidden;padding-bottom:18px}.news-card img{width:100%;display:block;aspect-ratio:3/4;object-fit:contain}.news-card h3{font-size:18px;margin:16px}.news-card .actions{padding:0 16px;align-items:center;gap:12px}.news-download{display:inline-block;background:#ffda35;color:#142830;padding:12px 16px!important;border-radius:9px;font-weight:700;text-decoration:none}.news-caption,#news-card-count{font-size:13px;color:#66716b;line-height:1.7}.news-caption{margin-bottom:0}@media(max-width:600px){.news-section{padding:16px}.news-cards{grid-template-columns:1fr}.news-section h2{font-size:23px}}
