@@ -29,3 +29,24 @@ class ShareCardTests(unittest.TestCase):
         self.assertFalse(review_matches(item, review, dt.date(2026,10,29)))
         item['units']=58
         self.assertFalse(review_matches(item, review, dt.date(2026,11,3)))
+
+    def test_verified_small_complex_is_not_requeued(self):
+        import json, tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from scripts.sharecards import build_sharecards
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'public').mkdir()
+            (root/'editorial').mkdir()
+            (root/'editorial/reviewed_cards.json').write_text('{}')
+            (root/'editorial/verified_complexes.json').write_text(json.dumps({'x':{'name':'small','complexUnits':426,'sourceUrl':'https://example.com/official'}}))
+            item = {'id':'x','name':'small','region':'경기','units':21,'price84':{'maxTypeTopManwon':119800}}
+            with patch('scripts.sharecards.ROOT',root):
+                manifest = build_sharecards([item], dt.date(2026,11,7))
+                self.assertEqual(manifest['pendingReview'], [])
+                self.assertEqual(item['complexUnits'],426)
+                item['name']='different'
+                item.pop('complexUnits')
+                manifest = build_sharecards([item], dt.date(2026,11,7))
+                self.assertEqual(len(manifest['pendingReview']),1)

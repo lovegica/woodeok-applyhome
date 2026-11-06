@@ -126,8 +126,15 @@ def build_sharecards(items, today):
     for old in folder.glob('*-news.png'):
         old.unlink()
     reviews = load_reviews()
+    complexes = json.loads((ROOT/'editorial/verified_complexes.json').read_text(encoding='utf-8'))
     ready, pending = [], []
     for item in items:
+        complex_record = complexes.get(item['id'])
+        if complex_record and complex_record['name'] == item['name']:
+            item['complexUnits'] = complex_record['complexUnits']
+            item['complexUnitsSource'] = complex_record['sourceUrl']
+            if item['complexUnits'] < POLICY['complexMinUnits']:
+                continue
         review = reviews.get(item['id'])
         if review:
             item['complexUnits'] = review['complexUnits']
