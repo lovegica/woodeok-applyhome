@@ -13,5 +13,20 @@
     "sourceUrl": "https://www.jh-raon.com/",
     "evidence": "사업주체 공식 홈페이지 OVERVIEW: 아파트 176세대 중 일반분양 113세대, 오피스텔 74실. 오피스텔은 아파트 세대수에 합산하지 않음. 단지 전체 500세대 미만으로 카드 제외.",
     "reviewedAt": "2026-11-07"
+  },
+  "2026000560-2026000560": {
+    "name": "해링턴 플레이스 문래",
+    "complexUnits": 218,
+    "sourceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?atchmnflSeqNo=2022113&atchmnflSn=4&houseManageNo=2026000560&pblancNo=2026000560",
+    "evidence": "청약홈 모집공고 6쪽: 아파트 3개동 총 218세대, 이번 일반분양 218세대.",
+    "reviewedAt": "2026-11-14",
+    "sourceSha256": "d283f0460ece9fb29ccbbdd968cec5eaa48bff49b7a5f0d0a4fe3ece12e99780"
+  },
+  "2026000505-2026000505": {
+    "name": "경희궁 에피트",
+    "complexUnits": 228,
+    "sourceUrl": "https://brand.hldni.com/gyeonghuigung/file/%E2%98%8502-1.%EA%B2%BD%ED%9D%AC%EA%B6%81%20%EC%97%90%ED%94%BC%ED%8A%B8%20%EC%9E%85%EC%A3%BC%EC%9E%90%EB%AA%A8%EC%A7%91%EA%B3%B5%EA%B3%A0%EB%AC%B8%20(%E2%98%85261112_%EC%8B%A0%ED%83%81%EC%82%AC%EC%97%85%EB%B6%80%20%ED%86%B5%ED%95%A9)_clean(%EC%B5%9C%EC%A2%851).pdf",
+    "evidence": "시공사 게시 모집공고 6쪽: 아파트 3개동 총 228세대, 이번 일반분양 134세대.",
+    "reviewedAt": "2026-11-14"
   }
 }
