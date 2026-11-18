@@ -36,5 +36,13 @@
     "evidence": "사업주체 임의공급 모집공고 3쪽: 아파트 2개동 총 160세대, 이번 임의공급 5세대.",
     "reviewedAt": "2026-11-17",
     "sourceSha256": "0ff15849fd166e47728f03278517f6a16f3ba325795a46adac533b22c1bc1c84"
+  },
+  "2026940255-2026940255": {
+    "name": "광명 시티프라디움 에듀하임",
+    "complexUnits": 426,
+    "sourceUrl": "https://xn--hc0bz5m11b1ue95n2zf6zxvzd.com/pages/gonggo",
+    "evidenceUrl": "https://xn--hc0bz5m11b1ue95n2zf6zxvzd.com/resources/file/261019_광명 시티프라디움 에듀하임 모집공고_전문_정정.pdf",
+    "evidence": "공식 최초 정정 모집공고: 공급규모 공동주택 지하 2층 지상 22층 6개동 총 426세대. 무순위 모집 물량 21세대와 구분. 단지 전체 500세대 미만으로 카드 제외.",
+    "reviewedAt": "2026-11-07"
   }
 }
