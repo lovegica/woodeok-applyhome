@@ -89,7 +89,21 @@ def render(item, review, today, folder):
         text(x,717,value,39,ink,280)
     box(48,789,984,142,yellow,16)
     text(72,806,'전용 84㎡ 분양가',29,ink,440)
-    text(72,852,f"{review['price84MinManwon']/10000:.2f}~{review['price84MaxManwon']/10000:.2f}억원",59,ink,920)
+    low = review['price84MinManwon']
+    high = review['price84MaxManwon']
+    if low == high:
+        won = round(low * 10000)
+        eok, remainder = divmod(won, 100000000)
+        manwon, remaining_won = divmod(remainder, 10000)
+        price_parts = [f'{eok}억']
+        if manwon:
+            price_parts.append(f'{manwon:,}만')
+        if remaining_won:
+            price_parts.append(f'{remaining_won:,}')
+        price_label = ' '.join(price_parts) + '원'
+    else:
+        price_label = f'{low/10000:.2f}~{high/10000:.2f}억원'
+    text(72,852,price_label,59,ink,920)
     text(648,809,review['priceNote'].replace('이번 공급 ', '').replace(' 기준', ''),23,ink,350)
     text(52,955,'입지',25,muted,100)
     text(157,950,review['locationLine'],33,ink,870)
