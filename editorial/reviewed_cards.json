@@ -38,8 +38,8 @@
     "start": "2026-11-23",
     "end": "2026-11-25",
     "noticeDate": "2026-11-12",
-    "reviewedAt": "2026-11-13",
-    "sourceSha256": "8f23d3b76ff393c290b4cb1bbea3cfd66155263a2925fc6d9b23af36fc47d734",
+    "reviewedAt": "2026-11-21",
+    "sourceSha256": "a7a3840a174ab58483c89227b692eea450ed6af062ac724ea7f1f1a90c01bcdc",
     "complexUnits": 984,
     "price84MinManwon": 103400,
     "price84MaxManwon": 110500,
@@ -60,10 +60,12 @@
     "receiptLabel": "11.23~25",
     "resultLabel": "12.01 발표 · 12.13~15 계약",
     "caution": "23일 특별공급 · 24일 1순위 · 25일 2순위 / 전매제한 6개월",
-    "sourceLabel": "GS건설 게시 모집공고 p.1~7",
-    "sourceUrl": "https://xi.co.kr/Files/cmsPage/20261112_090046_405001.pdf",
+    "sourceLabel": "GS건설 11월 20일 정정 모집공고 2·7~8쪽",
+    "sourceUrl": "https://xi.co.kr/Files/cmsPage/20261120_182304_478001.pdf",
     "complexSourceUrl": "https://xi.co.kr/armusee/view?cmsMenuSeq=29741",
-    "heroSourceUrl": "https://xi.co.kr/Files/cmsPage/20261112_093312_946001.jpg"
+    "heroSourceUrl": "https://xi.co.kr/Files/cmsPage/20261112_093312_946001.jpg",
+    "complexEvidence": "정정 모집공고 7쪽 아파트 984세대, 공식 사업개요 아파트 984세대·오피스텔 370실 별도",
+    "reviewNotes": "11월 20일 정정공고 1쪽 대조: 주방 유상옵션 시공 범위 및 일부 세대 일조·장식품 안내 수정. 84A/B/C 공급가격 최저 1,034,000,000원~최고 1,105,000,000원, 총세대수, 자격 및 접수·발표·계약 일정은 기존과 동일."
   },
   "2026940247-2026940247": {
     "name": "수원이목지구 대방 디에트르 더 리체Ⅰ(A4BL)",
